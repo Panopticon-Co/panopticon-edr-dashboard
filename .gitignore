@@ -1,0 +1,18 @@
+# Build and Cache
+**/build/
+**/.gradle/
+**/__pycache__/
+**/.pytest_cache/
+*.pyc
+*.pyo
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Agent Artifacts
+.agent/
+.agents/

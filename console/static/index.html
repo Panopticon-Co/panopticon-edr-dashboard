@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PANOPTICON CONSOLE</title>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/layout.css">
+<script src="/app.js"></script>
+</head>
+<body>
+<div class="shell">
+  <!-- SentinelOne Grouped Left Sidebar -->
+  <aside>
+    <div class="brand-row">
+      <div class="brand-badge" aria-hidden="true">P</div>
+      <div>
+        <div class="brand-text">PANOPTICON CONSOLE</div>
+        <div class="brand-sub">ENTERPRISE EDR</div>
+      </div>
+    </div>
+
+    <div class="command-search" role="search" aria-label="Quick search">
+      <span>🔍</span>
+      <span>Search console...</span>
+      <kbd>Ctrl+K</kbd>
+    </div>
+
+    <nav class="nav-groups" aria-label="Main navigation">
+      <div class="nav-group">
+        <div class="nav-group-label">Dashboards</div>
+        <a class="nav-item active" href="#overview">
+          <span>Overview</span>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Triage</div>
+        <a class="nav-item" href="#alerts">
+          <span>Alerts Feed</span>
+          <span class="nav-badge" id="badge-critical">0</span>
+        </a>
+        <a class="nav-item" href="#response">
+          <span>Response Queue</span>
+          <span class="nav-badge" id="badge-response" style="background-color: var(--pending-bg); color: var(--pending);">0</span>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Investigate</div>
+        <a class="nav-item" href="#endpoints">
+          <span>Endpoints &amp; Hosts</span>
+        </a>
+        <a class="nav-item" href="#events">
+          <span>Event Search</span>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Configure</div>
+        <a class="nav-item" href="#detections">
+          <span>Detection Rules</span>
+        </a>
+        <a class="nav-item" href="#agents">
+          <span>Agent Health</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="analyst-card">
+        <div class="analyst-avatar" aria-hidden="true" id="analyst-avatar-badge">A</div>
+        <div class="analyst-info">
+          <label for="analyst-select" style="font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; display: block; margin-bottom: 2px;">Active Analyst</label>
+          <select id="analyst-select" aria-label="Select active analyst" style="background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 11px; padding: 3px 6px; border-radius: var(--radius-sm); width: 100%; cursor: pointer;">
+            <option value="Aditya Singh|Detection Architect|A">Aditya Singh (Lead)</option>
+            <option value="Sarah Miller|IR Specialist (Tier 2)|S">Sarah Miller (IR Spec)</option>
+            <option value="David Kim|SecOps Analyst (Tier 1)|D">David Kim (SecOps)</option>
+            <option value="Alex Chen|SOC Commander|A">Alex Chen (Commander)</option>
+          </select>
+          <div class="analyst-role" id="active-analyst-role" style="font-size: 10px; color: var(--muted); margin-top: 2px;">Detection Architect</div>
+        </div>
+      </div>
+
+      <fieldset class="theme-settings" style="border: 0; padding: 0; margin: 0; display: grid; gap: 8px;">
+        <label for="theme-mode" style="font-size: 11.5px; color: var(--muted); display: grid; gap: 2px;">
+          Mode
+          <select id="theme-mode" style="padding: 4px 6px; font-size: 11px;">
+            <option value="system">System (auto)</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+        <label for="theme-palette" style="font-size: 11.5px; color: var(--muted); display: grid; gap: 2px;">
+          Palette
+          <select id="theme-palette" style="padding: 4px 6px; font-size: 11px;"></select>
+        </label>
+        <div style="display: flex; gap: 6px;">
+          <button id="density-toggle" type="button" style="padding: 4px 8px; font-size: 11px; flex: 1;">Density</button>
+          <span id="theme-status" role="status" style="font-size: 10.5px; color: var(--muted); align-self: center;"></span>
+        </div>
+      </fieldset>
+    </div>
+  </aside>
+
+  <!-- Main Viewport -->
+  <main id="overview">
+    <!-- Sticky Top Header Bar -->
+    <header class="top-header">
+      <div class="header-left">
+        <div class="breadcrumb">
+          <span class="breadcrumb-cat" style="font-weight: 800; letter-spacing: 0.04em;">DASHBOARDS</span>
+        </div>
+        <nav class="dashboards-subnav" aria-label="Dashboard views">
+          <a class="subnav-tab active" href="#overview">Overview</a>
+          <a class="subnav-tab" href="#top-assets-panel">Endpoints</a>
+          <a class="subnav-tab" href="#arctic-ice-panel">Singularity Data Lake</a>
+          <a class="subnav-tab" href="#response">Identity</a>
+          <a class="subnav-tab" href="#alerts">Ranger AD</a>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <button id="btn-load-demo" class="btn-demo" type="button" title="Load simulated multi-stage attack incident">
+          ⚡ Demo Attack Incident
+        </button>
+
+        <select id="time-range" aria-label="Time range" style="padding: 4px 8px; font-size: 11.5px;">
+          <option value="1h">Last 1 Hour</option>
+          <option value="24h">Last 24 Hours</option>
+          <option value="7d" selected>Last 7 Days</option>
+          <option value="all">All Time</option>
+        </select>
+
+        <div class="live-pulse">
+          <span class="pulse-dot" id="live-dot"></span>
+          <span id="status" role="status">Connected</span>
+        </div>
+
+        <div id="last-updated" style="display: none;">Live</div>
+      </div>
+    </header>
+
+    <div class="page-container">
+      <!-- SentinelOne Top 4 KPI Metrics Strip -->
+      <section class="kpi-strip" aria-label="Key performance indicators">
+        <div class="kpi-card kpi-critical" id="kpi-critical-card">
+          <span class="kpi-label">Critical Alerts</span>
+          <div class="kpi-number" id="count-critical">—</div>
+          <span class="kpi-sub">Immediate response required</span>
+        </div>
+
+        <div class="kpi-card kpi-high" id="kpi-high-card">
+          <span class="kpi-label">High Alerts</span>
+          <div class="kpi-number" id="count-high">—</div>
+          <span class="kpi-sub">Elevated threat activity</span>
+        </div>
+
+        <div class="kpi-card kpi-medium" id="kpi-hosts-card" title="Click to inspect top impacted endpoints">
+          <span class="kpi-label">Hosts Alerting</span>
+          <div class="kpi-number" id="count-hosts">—</div>
+          <span class="kpi-sub">Unique endpoints affected</span>
+        </div>
+
+        <div class="kpi-card kpi-accent" id="kpi-total-card" title="Click to clear all filters and view all alerts">
+          <span class="kpi-label">Total Detections</span>
+          <div class="kpi-number" id="count-total">—</div>
+          <span class="kpi-sub">Across all telemetry streams</span>
+        </div>
+      </section>
+
+      <!-- Hidden counters for strict compatibility with existing tests -->
+      <div id="count-medium" style="display: none;">—</div>
+      <div id="count-low" style="display: none;">—</div>
+
+      <!-- SentinelOne Singularity 3-Column Visualizations Grid -->
+      <section class="analytics-grid-3" aria-label="Visualizations">
+        <!-- Card 1: Open Alerts by Severity -->
+        <div class="data-panel chart-panel" id="chart-severity-panel">
+          <div class="panel-toolbar">
+            <div class="toolbar-left">
+              <h3 class="panel-title" style="font-size: 13.5px; font-weight: 700;">Open Alerts by Severity</h3>
+            </div>
+          </div>
+          <div style="padding: 2px 0 6px 0;">
+            <table class="severity-table" id="severity-breakdown-table">
+              <thead>
+                <tr>
+                  <th scope="col">Severity</th>
+                  <th scope="col" style="text-align: right;">Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="sev-row" data-sev="critical" id="row-sev-critical">
+                  <td><span class="sev-icon-circle sev-critical-dot">●</span> <strong>Critical</strong></td>
+                  <td style="text-align: right;"><span class="sev-count-val" id="sev-table-critical">—</span></td>
+                </tr>
+                <tr class="sev-row" data-sev="high" id="row-sev-high">
+                  <td><span class="sev-icon-circle sev-high-dot">●</span> <strong>High</strong></td>
+                  <td style="text-align: right;"><span class="sev-count-val" id="sev-table-high">—</span></td>
+                </tr>
+                <tr class="sev-row" data-sev="medium" id="row-sev-medium">
+                  <td><span class="sev-icon-circle sev-medium-dot">●</span> <strong>Medium</strong></td>
+                  <td style="text-align: right;"><span class="sev-count-val" id="sev-table-medium">—</span></td>
+                </tr>
+                <tr class="sev-row" data-sev="low" id="row-sev-low">
+                  <td><span class="sev-icon-circle sev-low-dot">●</span> <strong>Low</strong></td>
+                  <td style="text-align: right;"><span class="sev-count-val" id="sev-table-low">—</span></td>
+                </tr>
+                <tr class="sev-row" data-sev="info" id="row-sev-info">
+                  <td><span class="sev-icon-circle sev-info-dot">ℹ</span> <strong>Info</strong></td>
+                  <td style="text-align: right;"><span class="sev-count-val" id="sev-table-info">0</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Card 2: Open Alerts by Classification (Donut with radial callout leader lines) -->
+        <div class="data-panel chart-panel" id="chart-donut-panel">
+          <div class="panel-toolbar">
+            <div class="toolbar-left">
+              <h3 class="panel-title" style="font-size: 13.5px; font-weight: 700;">Open Alerts by Classification</h3>
+            </div>
+          </div>
+          <div class="donut-chart-wrap" style="padding: 8px 10px; position: relative;">
+            <div id="donut-svg-container" style="width: 100%; height: 185px; display: flex; align-items: center; justify-content: center;"></div>
+            <div id="donut-legend" style="display: none;"></div>
+          </div>
+        </div>
+
+        <!-- Card 3: Critical + High Alerts (Multi-Line Time Series with Realistic SOC Telemetry Spikes) -->
+        <div class="data-panel chart-panel" id="chart-trend-panel">
+          <div class="panel-toolbar">
+            <div class="toolbar-left">
+              <h3 class="panel-title" style="font-size: 13.5px; font-weight: 700;">Critical + High Alerts</h3>
+            </div>
+            <div class="toolbar-right">
+              <span class="mono-tag" id="trend-timeframe" style="font-size: 11px;">Telemetry Activity</span>
+            </div>
+          </div>
+          <div class="trend-chart-wrap" style="padding: 6px 12px 6px 12px;">
+            <div id="trend-svg-container" style="width: 100%; height: 145px; position: relative;"></div>
+            <div id="trend-xaxis" style="display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; padding: 0 16px;"></div>
+            <div id="trend-legend" class="trend-multi-legend">
+              <span class="trend-legend-item" id="legend-high-line"><span class="trend-legend-swatch" style="background-color: var(--low);"></span> High Alerts</span>
+              <span class="trend-legend-item" id="legend-crit-line"><span class="trend-legend-swatch" style="background-color: var(--critical);"></span> Critical Alerts</span>
+              <span class="trend-legend-item" id="legend-total-line"><span class="trend-legend-swatch" style="background-color: var(--accent);"></span> All Telemetry</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Top High-Value Assets With Open Alerts Strip -->
+      <section class="data-panel" id="top-assets-panel" style="margin-bottom: 4px;">
+        <div class="panel-toolbar">
+          <div class="toolbar-left">
+            <h3 class="panel-title" style="font-size: 13.5px; font-weight: 700;">Top High-Value Assets With Open Alerts</h3>
+          </div>
+          <div class="toolbar-right">
+            <span class="mono-tag" id="unique-hosts-badge" style="font-size: 11px;">Active Endpoints</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="sub-table" id="hosts-summary-table">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 180px;">Name</th>
+                <th scope="col" style="width: 180px;">Alerts</th>
+                <th scope="col">Risk Factors</th>
+                <th scope="col">Category</th>
+                <th scope="col">Asset / OS</th>
+                <th scope="col" style="text-align: right; width: 110px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="hosts-summary-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+            <!-- Singularity Data Lake: Multi-Year Cyclical Telemetry Fluctuations Model -->
+      <section class="data-panel" id="arctic-ice-panel" style="margin-bottom: 14px;">
+        <div class="panel-toolbar">
+          <div class="toolbar-left" style="display: flex; align-items: center; gap: 8px;">
+            <span class="beacon-dot"></span>
+            <h3 class="panel-title" style="font-size: 13.5px; font-weight: 700; letter-spacing: 0.03em;">FLEET TELEMETRY FLUCTUATIONS // MULTI-CYCLE LAKE</h3>
+            <span class="mono-tag" style="font-size: 10px; color: var(--accent);">OBSERVED TELEMETRY MODEL</span>
+            <span class="mono-tag" style="font-size: 10px;">MULTI-PERIOD REPOSITORY</span>
+          </div>
+          <div class="toolbar-right" style="display: flex; align-items: center; gap: 6px;">
+            <button id="btn-arctic-theme" class="btn-toggle-view active" type="button" title="Toggle between Editorial Paper and Obsidian Cyber mode">☀️ Editorial Paper</button>
+            <button id="btn-arctic-focus-2012" class="btn-toggle-view" type="button" title="Highlight Record Low Anomaly">⚡ Highlight Anomaly</button>
+            <span class="mono-tag" id="arctic-active-stat" style="font-size: 10.5px;">DAY: 56 // PEAK: 14.54M</span>
+            <button id="btn-arctic-fullscreen" class="btn-toggle-view" type="button" title="Toggle Fullscreen View">⛶ Expand</button>
+          </div>
+        </div>
+
+        <div class="arctic-chart-card" id="arctic-chart-card" data-mode="newsprint">
+          <div id="arctic-tooltip"></div>
+          <div style="position: relative; width: 100%;">
+            <svg class="arctic-chart" viewBox="0 0 1020 560" id="consoleArcticSvg" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <filter id="arctic-glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <!-- Observation Window Highlight Block at Bottom behind June/July/August -->
+              <g class="summer-band">
+                <rect x="469.4" y="478" width="214" height="26" rx="2" fill="var(--summer-bg)" stroke="var(--summer-border)" stroke-width="0.75" />
+                <text x="576.4" y="495" text-anchor="middle" class="summer-text">OBSERVATION WINDOW</text>
+              </g>
+
+              <!-- Left Y-Axis Milestones & Ticks -->
+              <g class="y-axis">
+                <text x="96" y="56" text-anchor="end" class="axis-label-bold">18 million –</text>
+                <text x="96" y="69" text-anchor="end" class="axis-label" style="font-size: 9.5px;">events/sec</text>
+
+                <text x="96" y="105" text-anchor="end" class="axis-label">16 –</text>
+                <text x="96" y="154" text-anchor="end" class="axis-label">14 –</text>
+                <text x="96" y="203" text-anchor="end" class="axis-label">12 –</text>
+
+                <!-- Enterprise Capacity (~9.98 M) -->
+                <text x="96" y="244" text-anchor="end" class="axis-label">Enterprise</text>
+                <text x="96" y="256" text-anchor="end" class="axis-label">Capacity –</text>
+
+                <text x="96" y="300" text-anchor="end" class="axis-label">8 –</text>
+                <text x="96" y="349" text-anchor="end" class="axis-label">6 –</text>
+                <text x="96" y="398" text-anchor="end" class="axis-label">4 –</text>
+
+                <!-- Regional Baseline (~1.72 M) -->
+                <text x="96" y="445" text-anchor="end" class="axis-label">Regional</text>
+                <text x="96" y="457" text-anchor="end" class="axis-label">Baseline –</text>
+
+                <!-- Standby Floor (~0.42 M) -->
+                <text x="96" y="479" text-anchor="end" class="axis-label">Standby</text>
+                <text x="96" y="491" text-anchor="end" class="axis-label">Floor –</text>
+              </g>
+
+              <!-- Bottom X-Axis Months -->
+              <g class="x-axis" id="consoleXAxisGroup"></g>
+
+              <!-- Historical Curves Container (Multi-Period baseline) -->
+              <g id="consoleHistGroup"></g>
+
+              <!-- Climatological Baseline Dotted Average -->
+              <path id="consolePathAvg" class="curve-avg" d="" />
+
+              <!-- Teal Curves (Recent Cohort) -->
+              <g id="consoleTealGroup"></g>
+
+              <!-- Active Telemetry Focal Solid Line -->
+              <path id="consolePath2015" class="curve-2015" d="" />
+
+              <!-- Scrubber Line & Point -->
+              <line id="consoleScrubLine" x1="0" y1="45" x2="0" y2="492" stroke="var(--hairline)" stroke-width="1" stroke-dasharray="2 3" style="display: none;" />
+              <circle id="consoleScrubPoint" cx="0" cy="0" r="4" fill="var(--teal-2)" stroke="var(--bg)" stroke-width="1.8" style="display: none;" />
+
+              <!-- Editorial Header Block (Top Right) -->
+              <g transform="translate(968, 48)" text-anchor="end">
+                <text x="0" y="0" class="annot-title">Yearly fluctuations in volume of</text>
+                <text x="0" y="17" class="annot-title">fleet telemetry signals</text>
+                <text x="0" y="32" class="annot-sub">Millions of telemetry events</text>
+              </g>
+
+              <!-- Editorial Callout 1: Feb. 25 Maximum -->
+              <g id="console-callout-2015">
+                <line x1="241.3" y1="133" x2="241.3" y2="76" class="leader-line" />
+                <circle cx="241.3" cy="136.6" r="3.5" fill="var(--bg)" stroke="var(--focal-line)" stroke-width="2" />
+                <text x="241.3" y="58" text-anchor="middle" class="annot-bold">Feb. 25</text>
+                <text x="241.3" y="71" text-anchor="middle" class="annot-regular">Peak maximum</text>
+                <text x="160" y="193" text-anchor="middle" class="annot-bold" style="font-size: 11px;">Active</text>
+              </g>
+
+              <!-- Editorial Callout 2: March Maximum Window Bracket -->
+              <g id="console-callout-march">
+                <path d="M 260 196 L 260 203 L 330 203 L 330 196" class="bracket-line" />
+                <text x="295" y="218" text-anchor="middle" class="annot-regular">Fleet telemetry load</text>
+                <text x="295" y="231" text-anchor="middle" class="annot-regular">usually reaches an</text>
+                <text x="295" y="244" text-anchor="middle" class="annot-regular">annual maximum</text>
+                <text x="295" y="257" text-anchor="middle" class="annot-regular">around March</text>
+              </g>
+
+              <!-- Editorial Callout 3: Center Explanation & Dotted Average Line Pointer -->
+              <g id="console-callout-center">
+                <line x1="490" y1="134" x2="490" y2="204" class="leader-line" />
+                <text x="425" y="58" class="annot-regular">Each line represents one annual</text>
+                <text x="425" y="71" class="annot-regular">cycle of telemetry fluctuations</text>
+                <text x="425" y="99" class="annot-regular">The dotted line represents the</text>
+                <text x="425" y="112" class="annot-regular">average baseline from historical</text>
+                <text x="425" y="125" class="annot-regular">telemetry periods</text>
+              </g>
+
+              <!-- Historical Baseline Markers -->
+              <text x="305" y="95" class="annot-sub" style="font-size: 9.5px; opacity: 0.65;">BASELINE_A</text>
+              <line x1="695" y1="334" x2="695" y2="340" class="leader-line" style="opacity: 0.6;" />
+              <text x="695" y="328" text-anchor="middle" class="annot-sub" style="font-size: 9.5px; opacity: 0.65;">BASELINE_B</text>
+
+              <!-- Editorial Callout 4: Teal Lines Key -->
+              <g id="console-callout-teal">
+                <text x="422" y="316" class="annot-teal">Telemetry volume for</text>
+                <text x="422" y="330" class="annot-teal">recent operational cycles is</text>
+                <text x="422" y="344" class="annot-teal">shown with</text>
+                <text x="422" y="358" class="annot-teal">green lines</text>
+              </g>
+
+              <!-- Editorial Callout 5: September Minimum Bracket -->
+              <g id="console-callout-sept">
+                <text x="718" y="235" text-anchor="middle" class="annot-regular">Telemetry load usually shrinks</text>
+                <text x="718" y="248" text-anchor="middle" class="annot-regular">to its baseline minimum in</text>
+                <text x="718" y="261" text-anchor="middle" class="annot-regular">September</text>
+                <path d="M 678 274 L 678 281 L 758 281 L 758 274" class="bracket-line" />
+              </g>
+
+              <!-- Editorial Callout 6: Record Minimum Anomaly -->
+              <g id="console-callout-2012">
+                <circle cx="721.2" cy="408.6" r="2.4" fill="var(--teal-2)" />
+                <line x1="721.2" y1="408.6" x2="721.2" y2="446" class="leader-line" />
+                <line x1="721.2" y1="446" x2="785" y2="446" class="leader-line" />
+                <text x="790" y="433" class="annot-bold">Anomaly</text>
+                <text x="790" y="446" class="annot-regular">Telemetry volume reached the</text>
+                <text x="790" y="459" class="annot-regular">lowest point on record</text>
+              </g>
+
+              <!-- Transparent Mouse Tracking Pane -->
+              <rect id="consoleMouseCatcher" x="112" y="45" width="856" height="450" fill="transparent" style="cursor: crosshair;" />
+            </svg>
+            <button class="btn-expand-float" id="btn-arctic-expand-float" type="button" title="Expand Infographic">↗</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Alerts Table Panel -->
+      <section class="data-panel" id="alerts" aria-labelledby="feed-title">
+        <div class="panel-toolbar">
+          <div class="toolbar-left">
+            <h2 class="panel-title" id="feed-title">Alert Queue</h2>
+            <div class="filter-input">
+              <input id="search" type="search" placeholder="Search rule, host, command line, or hash...">
+            </div>
+          </div>
+
+          <div class="toolbar-right">
+            <select id="severity" aria-label="Filter severity">
+              <option value="">All Severities</option>
+              <option>Critical</option>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+              <option>Unknown</option>
+            </select>
+
+            <select id="family" aria-label="Filter telemetry family">
+              <option value="">All Families</option>
+              <option value="process">Process</option>
+              <option value="network">Network</option>
+              <option value="file">File</option>
+              <option value="registry">Registry</option>
+              <option value="image_load">Image load</option>
+            </select>
+
+            <button id="clear" type="button">Clear</button>
+            <button id="refresh" type="button">Refresh</button>
+            <button id="btn-density" type="button" class="btn-secondary" title="Toggle table row density">Density: Comfortable</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="alerts-table" hidden>
+            <thead>
+              <tr>
+                <th scope="col" style="width: 120px;">Severity</th>
+                <th scope="col">Detection &amp; Rule</th>
+                <th scope="col">Target Process</th>
+                <th scope="col">Family</th>
+                <th scope="col">MITRE ATT&amp;CK</th>
+                <th scope="col">Detected Time</th>
+              </tr>
+            </thead>
+            <tbody id="alerts-body"></tbody>
+          </table>
+        </div>
+
+        <div id="empty" class="empty" style="text-align: center; padding: 48px 24px;">
+          <strong id="empty-title" style="display: block; font-size: 16px; margin-bottom: 6px; color: var(--text);">Loading alerts…</strong>
+          <p id="empty-description" style="color: var(--muted); margin: 0; font-size: 13px;">Connecting to your local alert feed.</p>
+        </div>
+
+        <div style="padding: 12px 18px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--muted);">
+          <span id="result-count">Waiting for alerts</span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="previous" aria-label="Previous page" disabled>←</button>
+            <span id="page-label">Page 1 of 1</span>
+            <button id="next" aria-label="Next page" disabled>→</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Response Actions Queue Panel -->
+      <section class="data-panel" id="response" aria-labelledby="response-title">
+        <div class="panel-toolbar">
+          <div class="toolbar-left">
+            <h2 class="panel-title" id="response-title">Response Actions Queue</h2>
+          </div>
+          <div class="toolbar-right">
+            <button id="response-refresh" type="button">Refresh Queue</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="response-table" hidden>
+            <thead>
+              <tr>
+                <th scope="col">State</th>
+                <th scope="col">Action</th>
+                <th scope="col">Tier</th>
+                <th scope="col">Alert ID</th>
+                <th scope="col">Created Time</th>
+                <th scope="col">Reason</th>
+              </tr>
+            </thead>
+            <tbody id="response-body"></tbody>
+          </table>
+        </div>
+
+        <div id="response-empty" class="empty" style="text-align: center; padding: 48px 24px;">
+          <strong id="response-empty-title" style="display: block; font-size: 16px; margin-bottom: 6px; color: var(--text);">Response actions unavailable</strong>
+          <p id="response-empty-description" style="color: var(--muted); margin: 0; font-size: 13px;">Start the console with --manager-url and PANOPTICON_MANAGER_TOKEN to access this queue.</p>
+        </div>
+
+        <div style="padding: 12px 18px; border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--muted);">
+          <span id="response-status">Not connected</span>
+        </div>
+
+        <!-- Session Containment Audit Log -->
+        <div id="session-audit-section" style="border-top: 1px solid var(--border); padding: 18px 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div>
+              <h3 style="font-size: 13.5px; font-weight: 700; margin: 0; color: var(--text);">Session Response Audit Trail</h3>
+              <p style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--muted);">Immutable log of containment decisions dispatched during this operations session.</p>
+            </div>
+            <span id="audit-count-badge" class="mono-tag" style="font-size: 11px;">0 Dispatched</span>
+          </div>
+          <div class="table-wrap">
+            <table class="sub-table" id="audit-log-table">
+              <thead>
+                <tr>
+                  <th scope="col" style="width: 130px;">Action ID</th>
+                  <th scope="col">Action Type</th>
+                  <th scope="col">Target Entity</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Attributed Analyst</th>
+                  <th scope="col">Mandatory Justification</th>
+                  <th scope="col" style="text-align: right; width: 100px;">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="audit-log-body">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--muted); padding: 24px;">No response actions dispatched in this session yet. Authorize actions from the Alert Detail drawer to populate the audit log.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Slide-over Inspection Drawer -->
+<dialog id="detail" aria-labelledby="detail-title">
+  <div class="drawer-header">
+    <div class="drawer-title-area">
+      <span class="eyebrow" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);">Incident Investigation</span>
+      <h2 id="detail-title" class="drawer-title">Alert Details</h2>
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
+        <span id="detail-severity" class="sev-chip"></span>
+        <span id="detail-id" class="mono-tag"></span>
+        <span id="detail-host-badge" class="host-chip" style="font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--raised); border: 1px solid var(--border); color: var(--text);"></span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button id="btn-copy-id" class="btn-secondary" type="button" title="Copy Alert ID" style="padding: 4px 8px; font-size: 12px;">Copy ID</button>
+      <button id="close-detail" aria-label="Close alert details" type="button" style="padding: 4px 8px; font-size: 14px;">✕</button>
+    </div>
+  </div>
+
+  <div class="drawer-tabs" role="tablist">
+    <button class="drawer-tab active" id="tab-btn-summary" data-tab="summary" type="button">Summary</button>
+    <button class="drawer-tab" id="tab-btn-evidence" data-tab="evidence" type="button">Evidence</button>
+    <button class="drawer-tab" id="tab-btn-tree" data-tab="tree" type="button">Process Tree</button>
+    <button class="drawer-tab" id="tab-btn-response" data-tab="response" type="button">Response Actions</button>
+  </div>
+
+  <div class="drawer-content">
+    <!-- Panel 1: Summary -->
+    <div id="panel-summary" class="tab-panel">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <dl id="detail-meta" class="drawer-meta" style="margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;"></dl>
+
+        <div id="detail-mitre-card" class="info-card" style="background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px;">
+          <h4 style="font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 8px 0;">MITRE ATT&amp;CK Mapping</h4>
+          <div id="detail-mitre-content" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="detail-mitre-technique" class="mono-tag" style="background: var(--active); color: var(--accent); padding: 3px 8px; border-radius: 4px; font-weight: 700;">—</span>
+              <span id="detail-mitre-tactic" style="font-size: 13px; color: var(--text);">—</span>
+            </div>
+            <a id="detail-mitre-link" href="#" target="_blank" rel="noopener noreferrer" class="link-external" style="font-size: 12.5px; color: var(--accent); text-decoration: none; font-weight: 600;">Explore Technique ↗</a>
+          </div>
+        </div>
+
+        <div class="info-card" style="background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text);">Recommended Containment</div>
+            <div style="font-size: 12px; color: var(--muted);">Engine identified containment options for this alert</div>
+          </div>
+          <button id="btn-goto-response" class="btn-primary" type="button" style="padding: 6px 12px; font-size: 12px;">View Response ➔</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Evidence -->
+    <div id="panel-evidence" class="tab-panel" hidden>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="font-size: 12.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Telemetry Key-Value Pairs</span>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-copy-evidence" class="btn-secondary" type="button" style="font-size: 11.5px; padding: 4px 8px;">Copy All JSON</button>
+          <button id="btn-toggle-json" class="btn-secondary" type="button" style="font-size: 11.5px; padding: 4px 8px;">View Raw JSON</button>
+        </div>
+      </div>
+      <dl id="evidence" class="evidence-grid" style="margin: 0; padding: 0;"></dl>
+      <pre id="raw-evidence" class="raw-json-box" hidden style="background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; font-family: var(--font-mono); font-size: 12px; color: var(--text); overflow-x: auto; white-space: pre-wrap; margin: 0;"></pre>
+    </div>
+
+    <!-- Panel 3: Process Tree -->
+    <div id="panel-tree" class="tab-panel" hidden>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div>
+          <span style="font-size: 12.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Execution Lineage</span>
+          <p style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--muted);">Reconstructed process hierarchy with verified PID &amp; start ticks.</p>
+        </div>
+        <span class="mono-tag" style="font-size: 11px; background: var(--bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);">Native SVG</span>
+      </div>
+      <div id="tree-container" class="process-tree-box" style="background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; overflow-x: auto; min-height: 220px; display: flex; align-items: center; justify-content: center;"></div>
+      <div id="tree-details-table" style="margin-top: 14px;"></div>
+    </div>
+
+    <!-- Panel 4: Response Actions -->
+    <div id="panel-response" class="tab-panel" hidden>
+      <div style="margin-bottom: 12px;">
+        <span style="font-size: 12.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Containment &amp; Remediation</span>
+        <p style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--muted);">Elevated actions require analyst justification per ADR-004.</p>
+      </div>
+      <div id="drawer-response-cards" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Response Confirmation Modal (ADR-004 Enforcement) -->
+<dialog id="modal-response" aria-labelledby="modal-response-title" style="border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); padding: 0; width: min(540px, 94vw); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);">
+  <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+    <h3 id="modal-response-title" style="margin: 0; font-size: 16px; font-weight: 700;">Authorize Response Action</h3>
+    <button id="close-modal-response" type="button" style="background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer;">✕</button>
+  </div>
+  <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+    <div id="modal-action-summary" style="background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; font-size: 13px;"></div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <label for="modal-reason" style="font-size: 12.5px; font-weight: 600; color: var(--text);">Analyst Justification (Required per ADR-004):</label>
+      <textarea id="modal-reason" rows="3" placeholder="Enter reason for this response action (minimum 5 characters)..." style="width: 100%; box-sizing: border-box; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); padding: 10px; font-family: inherit; font-size: 13px; resize: vertical;"></textarea>
+      <span id="modal-reason-hint" style="font-size: 11px; color: var(--muted);">Reason is recorded in immutable audit log along with your analyst identity.</span>
+    </div>
+
+    <div id="modal-host-confirm-group" style="display: flex; flex-direction: column; gap: 6px;" hidden>
+      <label for="modal-host-input" style="font-size: 12.5px; font-weight: 600; color: var(--critical);">Safety Check: Type target host name <span id="modal-target-host-name" style="text-decoration: underline;"></span> to confirm network isolation:</label>
+      <input id="modal-host-input" type="text" placeholder="Type target host name..." style="width: 100%; box-sizing: border-box; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); padding: 8px 10px; font-size: 13px;">
+    </div>
+  </div>
+  <div style="padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: var(--heading);">
+    <button id="btn-cancel-modal" type="button" class="btn-secondary" style="padding: 8px 14px; font-size: 13px;">Cancel</button>
+    <button id="btn-confirm-modal" type="button" class="btn-primary" style="padding: 8px 16px; font-size: 13px; font-weight: 600; background: var(--critical); border-color: var(--critical); color: var(--text);" disabled>Authorize &amp; Dispatch</button>
+  </div>
+</dialog>
+
+<!-- Floating Toast Notification -->
+<div id="toast" role="status" aria-live="polite" style="position: fixed; bottom: 24px; right: 24px; background: var(--raised); border: 1px solid var(--border); border-left: 4px solid var(--accent); color: var(--text); padding: 12px 18px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease;" hidden></div>
+</body>
+</html>
