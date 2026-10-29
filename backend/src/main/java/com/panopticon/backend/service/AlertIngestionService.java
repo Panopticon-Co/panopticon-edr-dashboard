@@ -7,7 +7,6 @@ import com.panopticon.backend.model.EndpointAsset;
 import com.panopticon.backend.model.ResponseAction;
 import com.panopticon.backend.repository.AlertRepository;
 import com.panopticon.backend.repository.EndpointRepository;
-import com.panopticon.backend.repository.ResponseActionRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +29,7 @@ public class AlertIngestionService {
     private static final Logger log = LoggerFactory.getLogger(AlertIngestionService.class);
 
     private final AlertRepository alertRepository;
-    private final ResponseActionRepository responseActionRepository;
+    private final ResponseActionService responseActionService;
     private final EndpointRepository endpointRepository;
     private final ObjectMapper objectMapper;
 
@@ -38,11 +37,11 @@ public class AlertIngestionService {
     private String alertsFilePath;
 
     public AlertIngestionService(AlertRepository alertRepository,
-                                 ResponseActionRepository responseActionRepository,
+                                 ResponseActionService responseActionService,
                                  EndpointRepository endpointRepository,
                                  ObjectMapper objectMapper) {
         this.alertRepository = alertRepository;
-        this.responseActionRepository = responseActionRepository;
+        this.responseActionService = responseActionService;
         this.endpointRepository = endpointRepository;
         this.objectMapper = objectMapper;
     }
@@ -53,6 +52,7 @@ public class AlertIngestionService {
         int ingested = ingestFile();
         log.info("Initial alert ingestion complete. Ingested {} new alerts.", ingested);
         syncEndpoints();
+        responseActionService.runExpirationSweep();
     }
 
     @Scheduled(fixedDelayString = "${panopticon.alerts.poll-interval-ms:15000}")
@@ -63,6 +63,7 @@ public class AlertIngestionService {
                 log.info("Polled alerts file: ingested {} new alerts", count);
                 syncEndpoints();
             }
+            responseActionService.runExpirationSweep();
         } catch (Exception e) {
             log.warn("Error during scheduled alert poll: {}", e.getMessage());
         }
@@ -154,7 +155,6 @@ public class AlertIngestionService {
         responseAction.setResponseId(responseId);
         responseAction.setAlertId(alert.getAlertId());
         responseAction.setAction(actionName);
-        responseAction.setLifecycleState("PENDING");
         responseAction.setCreatedAt(alert.getTimestamp() != null ? alert.getTimestamp() : Instant.now().toString());
 
         Object targetObj = ar.get("target");
@@ -164,14 +164,7 @@ public class AlertIngestionService {
             responseAction.setTarget(Map.of("host_id", alert.getHostId() != null ? alert.getHostId() : "unknown"));
         }
 
-        String tier = (String) ar.get("tier");
-        if (tier == null || tier.isBlank()) {
-            tier = "kill_process".equalsIgnoreCase(actionName) || "isolate_network".equalsIgnoreCase(actionName)
-                    ? "ANALYST_APPROVAL" : "AUTO_SAFE";
-        }
-        responseAction.setTier(tier);
-
-        responseActionRepository.insertOrIgnore(responseAction);
+        responseActionService.submitOrStageAction(responseAction);
         log.info("Staged pending response action {} ({}) for alert {}", responseId, actionName, alert.getAlertId());
     }
 

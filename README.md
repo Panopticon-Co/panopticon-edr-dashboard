@@ -39,9 +39,6 @@ panopticon-edr-dashboard/
   - Grouped enterprise left sidebar (Dashboards, Triage Feed, Response Queue, Assets, Threat Hunting).
   - Top KPI Metrics Strip (Critical, High, Medium, Low severity alerts and fleet coverage).
   - Open Alerts Breakdown with severity badges, timestamps, and MITRE ATT&CK tags.
-- **Fleet Telemetry Fluctuations Data Lake:**
-  - SVG cyclical multi-period anomaly observation model with interactive theme toggles (Editorial Paper vs. Obsidian Cyber).
-  - Multi-line time-series activity with live spike indicators.
 - **Spring Boot Java Backend (Port 8788):**
   - High-performance REST endpoints for alert ingestion, statistics, and analyst response authorization.
   - Native SQLite persistence with thread-safe Write-Ahead Logging (WAL).
@@ -92,6 +89,5 @@ Visit **[http://127.0.0.1:8787/#overview](http://127.0.0.1:8787/#overview)**.
 | `GET` | `/api/v1/dashboard/stats` | Aggregated fleet alert severity and host metrics |
 | `GET` | `/api/v1/alerts` | Paginated alert feed with MITRE tactic/technique details |
 | `GET` | `/api/v1/endpoints` | Fleet assets and host agent telemetry status |
-| `GET` | `/api/v1/telemetry/fluctuations` | Multi-cycle historical telemetry trends for the data lake chart |
 | `GET` | `/api/v1/response-actions` | Active response queue awaiting analyst authorization |
 | `POST` | `/api/v1/response-actions/{id}/authorize` | Approve remediation (isolate host, kill PID) |

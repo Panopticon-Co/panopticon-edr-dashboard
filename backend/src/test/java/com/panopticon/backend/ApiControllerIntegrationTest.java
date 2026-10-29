@@ -5,6 +5,7 @@ import com.panopticon.backend.model.AlertRecord;
 import com.panopticon.backend.model.ResponseAction;
 import com.panopticon.backend.repository.AlertRepository;
 import com.panopticon.backend.repository.ResponseActionRepository;
+import com.panopticon.backend.service.ResponseActionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ public class ApiControllerIntegrationTest {
 
     @Autowired
     private ResponseActionRepository responseActionRepository;
+
+    @Autowired
+    private ResponseActionService responseActionService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -135,13 +139,110 @@ public class ApiControllerIntegrationTest {
     }
 
     @Test
-    void testTelemetryFluctuationsEndpoint() throws Exception {
-        mockMvc.perform(get("/api/v1/telemetry/fluctuations"))
+    void testResponseActionRejectValidationAndAudit() throws Exception {
+        ResponseAction action = new ResponseAction();
+        action.setResponseId("rsp-test-rej");
+        action.setAlertId("ALT-MOCK-002");
+        action.setAction("QUARANTINE_FILE");
+        action.setTier("ANALYST_APPROVAL");
+        action.setLifecycleState("PENDING");
+        action.setTarget(Map.of("path", "/tmp/bad.exe"));
+        responseActionRepository.insertOrIgnore(action);
+
+        // Reject with empty reason -> 400
+        mockMvc.perform(post("/api/v1/response-actions/rsp-test-rej/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", containsString("non-empty reason")));
+
+        // Reject with whitespace reason -> 400
+        mockMvc.perform(post("/api/v1/response-actions/rsp-test-rej/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", containsString("non-empty reason")));
+
+        // Reject with overlong reason (> 512 chars) -> 400
+        String overlong = "R".repeat(513);
+        mockMvc.perform(post("/api/v1/response-actions/rsp-test-rej/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"" + overlong + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", containsString("512")));
+
+        // Reject with valid reason -> 200
+        mockMvc.perform(post("/api/v1/response-actions/rsp-test-rej/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Analyst verified benign binary\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.climatological_average", hasSize(365)))
-                .andExpect(jsonPath("$.historical_baselines", aMapWithSize(31)))
-                .andExpect(jsonPath("$.operational_cohorts", aMapWithSize(5)))
-                .andExpect(jsonPath("$.active_telemetry", not(empty())))
-                .andExpect(jsonPath("$.incident_callouts", not(empty())));
+                .andExpect(jsonPath("$.status", is("rejected")))
+                .andExpect(jsonPath("$.decided_reason", is("Analyst verified benign binary")));
+
+        ResponseAction updated = responseActionRepository.findById("rsp-test-rej").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals("REJECTED", updated.getLifecycleState());
+        org.junit.jupiter.api.Assertions.assertEquals("Analyst verified benign binary", updated.getDecidedReason());
+    }
+
+    @Test
+    void testDoubleAuthorizeCasFailure() throws Exception {
+        ResponseAction action = new ResponseAction();
+        action.setResponseId("rsp-test-cas");
+        action.setAlertId("ALT-MOCK-003");
+        action.setAction("KILL_PROCESS");
+        action.setTier("ANALYST_APPROVAL");
+        action.setLifecycleState("PENDING");
+        action.setTarget(Map.of("target_pid", 100, "target_start_time_ticks", 200));
+        responseActionRepository.insertOrIgnore(action);
+
+        // First authorize -> OK
+        mockMvc.perform(post("/api/response-actions/rsp-test-cas/authorize"))
+                .andExpect(status().isOk());
+
+        // Second authorize -> 400 (CAS check failure, no longer PENDING)
+        mockMvc.perform(post("/api/response-actions/rsp-test-cas/authorize"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error", containsString("must be PENDING")));
+    }
+
+    @Test
+    void testExpirationSweepAndDuplicateSuppression() {
+        // Test duplicate suppression via service
+        ResponseAction action1 = new ResponseAction();
+        action1.setResponseId("rsp-dup-1");
+        action1.setAlertId("ALT-DUP-1");
+        action1.setAction("ISOLATE_HOST");
+        action1.setTarget(Map.of("host_id", "WS-DUP-HOST"));
+        boolean staged1 = responseActionService.submitOrStageAction(action1);
+        org.junit.jupiter.api.Assertions.assertTrue(staged1);
+        org.junit.jupiter.api.Assertions.assertEquals("PENDING", action1.getLifecycleState());
+
+        // Second action for same host and action -> marked REJECTED as duplicate
+        ResponseAction action2 = new ResponseAction();
+        action2.setResponseId("rsp-dup-2");
+        action2.setAlertId("ALT-DUP-2");
+        action2.setAction("ISOLATE_HOST");
+        action2.setTarget(Map.of("host_id", "WS-DUP-HOST"));
+        boolean staged2 = responseActionService.submitOrStageAction(action2);
+        org.junit.jupiter.api.Assertions.assertTrue(staged2);
+        org.junit.jupiter.api.Assertions.assertEquals("REJECTED", action2.getLifecycleState());
+        org.junit.jupiter.api.Assertions.assertTrue(action2.getDecidedReason().contains("duplicate of rsp-dup-1"));
+
+        // Test 15-minute expiration sweep
+        ResponseAction staleAction = new ResponseAction();
+        staleAction.setResponseId("rsp-stale-1");
+        staleAction.setAlertId("ALT-STALE-1");
+        staleAction.setAction("KILL_PROCESS");
+        staleAction.setTier("ANALYST_APPROVAL");
+        staleAction.setLifecycleState("PENDING");
+        staleAction.setCreatedAt(java.time.Instant.now().minus(20, java.time.temporal.ChronoUnit.MINUTES).toString());
+        staleAction.setTarget(Map.of("target_pid", 999, "target_start_time_ticks", 888));
+        responseActionRepository.insertOrIgnore(staleAction);
+
+        int expired = responseActionService.runExpirationSweep();
+        org.junit.jupiter.api.Assertions.assertTrue(expired >= 1);
+
+        ResponseAction fetchedStale = responseActionRepository.findById("rsp-stale-1").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals("EXPIRED", fetchedStale.getLifecycleState());
     }
 }

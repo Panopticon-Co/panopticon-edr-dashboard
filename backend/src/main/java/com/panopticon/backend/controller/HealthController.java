@@ -36,8 +36,7 @@ public class HealthController {
                         "dashboard_stats", "/api/v1/dashboard/stats",
                         "alerts", "/api/v1/alerts",
                         "endpoints", "/api/v1/endpoints",
-                        "response_actions", "/api/v1/response-actions",
-                        "telemetry_fluctuations", "/api/v1/telemetry/fluctuations"
+                        "response_actions", "/api/v1/response-actions"
                 ),
                 "auth_note", "Public REST endpoints require no credentials. Basic Auth user: admin, password: panopticon"
         ));

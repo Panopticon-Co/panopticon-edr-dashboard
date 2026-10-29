@@ -124,6 +124,31 @@ def fetch_response_actions(manager_url: str, manager_token: str, *, timeout: flo
         raise ManagerProxyError(str(exc)) from exc
 
 
+def submit_response_action(
+    manager_url: str,
+    manager_token: str,
+    response_id: str,
+    action: str,
+    body: bytes = b"",
+    *,
+    timeout: float = 5.0,
+) -> tuple[int, bytes]:
+    """Server-side POST proxy to Manager's /api/v1/response-actions/{response_id}/{action}."""
+    url = f"{manager_url.rstrip('/')}/api/v1/response-actions/{response_id}/{action}"
+    headers = {
+        "Authorization": f"Bearer {manager_token}",
+        "Content-Type": "application/json",
+    }
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+            return response.status, response.read()
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read()
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise ManagerProxyError(str(exc)) from exc
+
+
 def make_handler(
     alerts_file: Path, manager_url: str | None = None, manager_token: str | None = None
 ) -> type[BaseHTTPRequestHandler]:
@@ -208,6 +233,61 @@ def make_handler(
                 body = json.dumps({"error": f"could not reach Manager: {exc}"}).encode("utf-8")
                 self._send_bytes(502, body, "application/json; charset=utf-8")
                 return
+            self._send_bytes(status, body, "application/json; charset=utf-8")
+
+        def do_POST(self):  # noqa: N802
+            route = self.path.split("?", 1)[0]
+            parts = route.strip("/").split("/")
+            if (
+                len(parts) == 4
+                and parts[0] == "api"
+                and parts[1] == "response-actions"
+                and parts[3] in ("authorize", "reject")
+            ):
+                self._handle_response_action_submit(parts[2], parts[3])
+            else:
+                self._not_found()
+
+        def _handle_response_action_submit(self, response_id: str, action: str) -> None:
+            if not manager_url or not manager_token:
+                body = json.dumps(
+                    {"error": "Manager connection not configured (--manager-url / PANOPTICON_MANAGER_TOKEN)"}
+                ).encode("utf-8")
+                self._send_bytes(503, body, "application/json; charset=utf-8")
+                return
+
+            length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(length) if length > 0 else b""
+
+            if action == "reject":
+                try:
+                    payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    body = json.dumps(
+                        {"error": "A non-empty reason is required to reject a response action"}
+                    ).encode("utf-8")
+                    self._send_bytes(400, body, "application/json; charset=utf-8")
+                    return
+
+                reason = payload.get("reason") if isinstance(payload, dict) else None
+                if not isinstance(reason, str) or not reason.strip():
+                    body = json.dumps(
+                        {"error": "A non-empty reason is required to reject a response action"}
+                    ).encode("utf-8")
+                    self._send_bytes(400, body, "application/json; charset=utf-8")
+                    return
+
+                out_body = json.dumps({"reason": reason.strip()}).encode("utf-8")
+            else:
+                out_body = b""
+
+            try:
+                status, body = submit_response_action(manager_url, manager_token, response_id, action, out_body)
+            except ManagerProxyError as exc:
+                body = json.dumps({"error": f"could not reach Manager: {exc}"}).encode("utf-8")
+                self._send_bytes(502, body, "application/json; charset=utf-8")
+                return
+
             self._send_bytes(status, body, "application/json; charset=utf-8")
 
         def do_HEAD(self):  # noqa: N802

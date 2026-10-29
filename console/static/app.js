@@ -1152,6 +1152,97 @@ if (densityBtn) {
   });
 }
 
+// ============================================================================
+// SLIDE-BASED NAVIGATION ENGINE (Milestone 3 — R3)
+// ============================================================================
+const SLIDES = [
+  { id: "panel-overview", hash: "#overview", title: "Overview / Posture" },
+  { id: "panel-endpoints", hash: "#endpoints", title: "Endpoint Fleet & Health" },
+  { id: "panel-alerts", hash: "#alerts", title: "Detections & Alerts" },
+  { id: "panel-response", hash: "#response", title: "Response Action Queue & Audit" }
+];
+let currentSlide = 0;
+
+function getSlideIndexFromHash(hash) {
+  if (!hash || typeof hash !== "string") return Math.max(0, 0);
+  const clean = hash.replace(/^#/, "").toLowerCase().trim();
+  if (clean === "overview" || clean === "panel-overview") return 0;
+  if (clean === "endpoints" || clean === "panel-endpoints" || clean === "top-assets-panel") return 1;
+  if (clean === "alerts" || clean === "panel-alerts") return 2;
+  if (clean === "response" || clean === "panel-response") return 3;
+  return Math.max(0, 0);
+}
+
+function goToSlide(targetIndex) {
+  const nextIndex = Math.max(0, Math.min(3, Math.min(SLIDES.length - 1, targetIndex)));
+  currentSlide = nextIndex;
+
+  const slideTrack = $("slide-track");
+  if (slideTrack) {
+    if (!slideTrack.style) slideTrack.style = {};
+    slideTrack.style.transform = "translateX(-" + (nextIndex * 25) + "%)";
+  }
+
+  const btnPrev = $("btn-slide-prev");
+  if (btnPrev) {
+    btnPrev.disabled = (nextIndex <= 0);
+  }
+
+  const btnNext = $("btn-slide-next");
+  if (btnNext) {
+    btnNext.disabled = (nextIndex >= 3 || nextIndex >= SLIDES.length - 1);
+  }
+
+  const indicator = $("slide-indicator");
+  if (indicator) {
+    indicator.textContent = "Slide " + (nextIndex + 1) + " of 4: " + SLIDES[nextIndex].title;
+  }
+
+  // Synchronize sidebar links active state
+  const targetHash = SLIDES[nextIndex].hash;
+  const targetId = SLIDES[nextIndex].id;
+  document.querySelectorAll("nav a").forEach((item) => {
+    const href = item.getAttribute ? item.getAttribute("href") : "";
+    if (href === targetHash || href === "#" + targetId || (nextIndex === 1 && href === "#top-assets-panel")) {
+      item.classList.add("active");
+    } else if (href && ["#overview", "#endpoints", "#alerts", "#response", "#panel-overview", "#panel-endpoints", "#panel-alerts", "#panel-response", "#top-assets-panel"].some((h) => href === h)) {
+      item.classList.remove("active");
+    }
+  });
+
+  // Synchronize subnav tabs active state
+  document.querySelectorAll(".subnav-tab").forEach((tab) => {
+    const href = tab.getAttribute ? tab.getAttribute("href") : "";
+    if (href === targetHash || href === "#" + targetId || (nextIndex === 1 && href === "#top-assets-panel")) {
+      tab.classList.add("active");
+    } else {
+      tab.classList.remove("active");
+    }
+  });
+
+  // Synchronize URL hash with history.replaceState
+  if (typeof window !== "undefined" && window.location) {
+    if (window.location.hash !== targetHash) {
+      if (typeof history !== "undefined" && history.replaceState) {
+        history.replaceState(null, "", targetHash);
+      } else {
+        window.location.hash = targetHash;
+      }
+    }
+  }
+}
+
+// Next / Previous button event listeners
+const btnPrevEl = $("btn-slide-prev");
+if (btnPrevEl) {
+  btnPrevEl.addEventListener("click", () => goToSlide(currentSlide - 1));
+}
+const btnNextEl = $("btn-slide-next");
+if (btnNextEl) {
+  btnNextEl.addEventListener("click", () => goToSlide(currentSlide + 1));
+}
+
+// Unified Keyboard listener for slide transitions, shortcuts, and modal management
 document.addEventListener("keydown", (e) => {
   if (!e || !e.key) return;
   if (e.key === "Escape") {
@@ -1165,352 +1256,67 @@ document.addEventListener("keydown", (e) => {
       detail.close();
       document.querySelectorAll("tr.selected-row").forEach((r) => r.classList.remove("selected-row"));
     }
-  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
     if (e.preventDefault) e.preventDefault();
     const search = $("search");
     if (search && search.focus) search.focus();
+    return;
+  }
+
+  // Ignore navigation arrow keys if user is typing or if any modal/dialog is open
+  const activeEl = document.activeElement;
+  const tag = (activeEl && activeEl.tagName) ? activeEl.tagName.toUpperCase() : "";
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(tag) || (activeEl && activeEl.isContentEditable)) {
+    return;
+  }
+  const modalResp = $("modal-response");
+  if (modalResp && modalResp.open) return;
+  const detailDialog = $("detail");
+  if (detailDialog && detailDialog.open) return;
+
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+    if (e.preventDefault) e.preventDefault();
+    goToSlide(currentSlide + 1);
+  } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+    if (e.preventDefault) e.preventDefault();
+    goToSlide(currentSlide - 1);
   }
 });
 
-// Sidebar Navigation
-document.querySelectorAll("nav a").forEach((link) => link.addEventListener("click", (e) => {
-  document.querySelectorAll("nav a").forEach((item) => item.classList.remove("active"));
-  link.classList.add("active");
-  const href = link.getAttribute ? link.getAttribute("href") : "";
-  if (href === "#response") {
-    const respSec = $("response");
-    if (respSec && respSec.scrollIntoView) respSec.scrollIntoView({ behavior: "smooth" });
-  } else if (href === "#alerts") {
-    const alertSec = $("alerts");
-    if (alertSec && alertSec.scrollIntoView) alertSec.scrollIntoView({ behavior: "smooth" });
-  } else if (href === "#endpoints") {
-    const topAssets = $("top-assets-panel");
-    if (topAssets && topAssets.scrollIntoView) topAssets.scrollIntoView({ behavior: "smooth" });
-  }
-}));
-
-
-function initArcticChart() {
-  if (typeof document === "undefined" || !document.createElementNS) return;
-  const svg = $("consoleArcticSvg");
-  if (!svg) return;
-
-  function calcExtent(day, peak_d, peak_v, min_d, min_v, noise = 0) {
-    let s, val;
-    if (day >= peak_d && day <= min_d) {
-      const t = (day - peak_d) / (min_d - peak_d);
-      s = 0.5 - 0.5 * Math.cos(t * Math.PI);
-      val = peak_v - (peak_v - min_v) * s;
-    } else {
-      const daysSinceMin = day < peak_d ? day + (365 - min_d) : day - min_d;
-      const totalFreeze = (365 - min_d) + peak_d;
-      const t = daysSinceMin / totalFreeze;
-      s = 0.5 - 0.5 * Math.cos(t * Math.PI);
-      val = min_v + (peak_v - min_v) * s;
-    }
-    if (noise) {
-      val += Math.sin(day * 0.18) * noise * 0.5 + Math.cos(day * 0.35) * noise * 0.3;
-    }
-    return Math.max(0.5, Math.round(val * 100) / 100);
-  }
-
-  const avg = [];
-  for (let d = 1; d <= 365; d++) avg.push(calcExtent(d, 68, 15.65, 260, 6.42, 0));
-
-  const historical = {};
-  for (let y = 1979; y <= 2009; y++) {
-    const decay = (y - 1979) / 30.0;
-    const peak_v = 16.5 - decay * 1.1 + Math.sin(y * 1.7) * 0.35;
-    const min_v = 7.8 - decay * 2.2 + Math.cos(y * 2.1) * 0.40;
-    const peak_d = 65 + Math.round(Math.sin(y * 0.9) * 6);
-    const min_d = 258 + Math.round(Math.cos(y * 1.3) * 5);
-    const pts = [];
-    for (let d = 1; d <= 365; d++) pts.push(calcExtent(d, peak_d, peak_v, min_d, min_v, 0.08));
-    historical[y] = pts;
-  }
-
-  const teal_group = {};
-  const specs = {
-    2010: { peak_v: 15.25, min_v: 4.90, peak_d: 66, min_d: 261 },
-    2011: { peak_v: 14.65, min_v: 4.60, peak_d: 64, min_d: 257 },
-    2012: { peak_v: 15.20, min_v: 3.41, peak_d: 70, min_d: 260 },
-    2013: { peak_v: 15.15, min_v: 5.10, peak_d: 74, min_d: 259 },
-    2014: { peak_v: 14.90, min_v: 5.02, peak_d: 69, min_d: 258 }
-  };
-  Object.keys(specs).forEach((y) => {
-    const sp = specs[y];
-    const pts = [];
-    for (let d = 1; d <= 365; d++) pts.push(calcExtent(d, sp.peak_d, sp.peak_v, sp.min_d, sp.min_v, 0.06));
-    teal_group[y] = pts;
+// Sidebar & Subnav Navigation Click Listeners
+function bindNavSlideLinks() {
+  const allNavLinks = Array.from(document.querySelectorAll("nav a, .subnav-tab"));
+  allNavLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      const href = link.getAttribute ? link.getAttribute("href") : "";
+      if (!href || !href.startsWith("#")) return;
+      const clean = href.replace(/^#/, "").toLowerCase();
+      if (["overview", "endpoints", "alerts", "response", "panel-overview", "panel-endpoints", "panel-alerts", "panel-response", "top-assets-panel"].includes(clean)) {
+        if (e && e.preventDefault) e.preventDefault();
+        const targetIndex = getSlideIndexFromHash(href);
+        goToSlide(targetIndex);
+      }
+    });
   });
+}
+bindNavSlideLinks();
 
-  const y2015 = [];
-  for (let d = 1; d <= 90; d++) {
-    let v;
-    if (d <= 56) {
-      v = 13.10 + (14.54 - 13.10) * Math.sin((d / 56.0) * Math.PI / 2.0);
-    } else {
-      v = 14.54 - 0.20 * ((d - 56) / 34.0);
-    }
-    v += Math.sin(d * 0.45) * 0.06;
-    y2015.push(Math.round(v * 100) / 100);
-  }
+// Initial slide position from URL hash on page load
+const initialHash = (typeof window !== "undefined" && window.location && window.location.hash) ? window.location.hash : "";
+goToSlide(getSlideIndexFromHash(initialHash));
 
-  const X_MIN = 105, X_MAX = 980;
-  const Y_MAX_VAL = 18.0, Y_MIN_VAL = 0.0;
-  const Y_TOP = 70, Y_BOTTOM = 510;
-
-  function scaleX(day) {
-    return X_MIN + ((day - 1) / 364.0) * (X_MAX - X_MIN);
-  }
-  function scaleY(extent) {
-    return Y_TOP + ((Y_MAX_VAL - extent) / (Y_MAX_VAL - Y_MIN_VAL)) * (Y_BOTTOM - Y_TOP);
-  }
-
-  function pointsToPath(pts, maxDay = 365) {
-    let d = "";
-    for (let i = 0; i < Math.min(pts.length, maxDay); i++) {
-      const x = scaleX(i + 1);
-      const y = scaleY(pts[i]);
-      if (i === 0) d += `M ${x.toFixed(1)} ${y.toFixed(1)}`;
-      else d += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
-    }
-    return d;
-  }
-
-  function safeSvg(tag, attrs) {
-    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-    if (attrs) {
-      for (const [k, v] of Object.entries(attrs)) {
-        if (el.setAttribute) el.setAttribute(k, v);
-      }
-    }
-    return el;
-  }
-
-  // Render Months
-  const xAxisGroup = $("consoleXAxisGroup");
-  if (xAxisGroup) {
-    const months = [
-      { name: "JAN.", day: 15, sep: 32 },
-      { name: "FEB.", day: 45, sep: 60 },
-      { name: "MARCH", day: 75, sep: 91 },
-      { name: "APRIL", day: 105, sep: 121 },
-      { name: "MAY", day: 136, sep: 152 },
-      { name: "JUNE", day: 166, sep: 182 },
-      { name: "JULY", day: 197, sep: 213 },
-      { name: "AUG.", day: 228, sep: 244 },
-      { name: "SEPT.", day: 258, sep: 274 },
-      { name: "OCT.", day: 289, sep: 305 },
-      { name: "NOV.", day: 319, sep: 335 },
-      { name: "DEC.", day: 350, sep: 365 }
-    ];
-    xAxisGroup.replaceChildren();
-    months.forEach((m, idx) => {
-      const tx = scaleX(m.day);
-      const text = safeSvg("text", {
-        x: tx.toFixed(1),
-        y: "532",
-        "text-anchor": "middle",
-        class: "month-label"
-      });
-      text.textContent = m.name;
-      xAxisGroup.appendChild(text);
-
-      if (idx < months.length - 1) {
-        const sepX = scaleX(m.sep);
-        const line = safeSvg("line", {
-          x1: sepX.toFixed(1),
-          y1: "520",
-          x2: sepX.toFixed(1),
-          y2: "536",
-          stroke: "var(--border)",
-          "stroke-width": "1"
-        });
-        xAxisGroup.appendChild(line);
-      }
-    });
-  }
-
-  // Historical Curves
-  const histGroup = $("consoleHistGroup");
-  if (histGroup) {
-    histGroup.replaceChildren();
-    Object.keys(historical).forEach((yr) => {
-      const path = safeSvg("path", {
-        d: pointsToPath(historical[yr]),
-        class: "curve-historical",
-        "data-year": yr
-      });
-      histGroup.appendChild(path);
-    });
-  }
-
-  // Dotted Average
-  const pathAvg = $("consolePathAvg");
-  if (pathAvg && pathAvg.setAttribute) pathAvg.setAttribute("d", pointsToPath(avg));
-
-  // Teal Curves
-  const tealGroup = $("consoleTealGroup");
-  if (tealGroup) {
-    tealGroup.replaceChildren();
-    const colors = ["var(--teal-1)", "var(--teal-2)", "var(--teal-3)", "var(--teal-4)", "var(--teal-5)"];
-    Object.keys(teal_group).forEach((yr, i) => {
-      const path = safeSvg("path", {
-        d: pointsToPath(teal_group[yr]),
-        class: "curve-teal",
-        id: "curve-" + yr,
-        stroke: colors[i % colors.length],
-        "data-year": yr
-      });
-      tealGroup.appendChild(path);
-    });
-  }
-
-  // 2015 Curve
-  const path2015 = $("consolePath2015");
-  if (path2015 && path2015.setAttribute) path2015.setAttribute("d", pointsToPath(y2015, 90));
-
-  // Hover and Scrubber
-  const mouseCatcher = $("consoleMouseCatcher");
-  const scrubLine = $("consoleScrubLine");
-  const scrubPoint = $("consoleScrubPoint");
-  const tooltip = $("arctic-tooltip");
-  const chartCard = $("arctic-chart-card");
-  const activeStat = $("arctic-active-stat");
-
-  function getDayFromDate(dayOfYear) {
-    const date = new Date(2015, 0);
-    date.setDate(dayOfYear);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  }
-
-  if (mouseCatcher && chartCard) {
-    mouseCatcher.addEventListener("mousemove", (e) => {
-      if (!mouseCatcher.getBoundingClientRect || !chartCard.getBoundingClientRect) return;
-      const rect = mouseCatcher.getBoundingClientRect();
-      const cardRect = chartCard.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const ratio = Math.max(0, Math.min(1, mouseX / rect.width));
-      const day = Math.max(1, Math.min(365, Math.round(ratio * 364 + 1)));
-
-      const xPos = scaleX(day);
-      const avgVal = avg[day - 1];
-      const y2012Val = teal_group["2012"][day - 1];
-      const y2015Val = day <= 90 ? y2015[day - 1] : null;
-
-      if (scrubLine) {
-        if (scrubLine.setAttribute) {
-          scrubLine.setAttribute("x1", xPos.toFixed(1));
-          scrubLine.setAttribute("x2", xPos.toFixed(1));
-        }
-        if (scrubLine.style) scrubLine.style.display = "block";
-      }
-
-      if (scrubPoint) {
-        if (scrubPoint.setAttribute) {
-          scrubPoint.setAttribute("cx", xPos.toFixed(1));
-          scrubPoint.setAttribute("cy", scaleY(avgVal).toFixed(1));
-        }
-        if (scrubPoint.style) scrubPoint.style.display = "block";
-      }
-
-      if (tooltip) {
-        const stageX = e.clientX - cardRect.left;
-        const stageY = e.clientY - cardRect.top;
-        if (tooltip.style) {
-          tooltip.style.left = `${stageX}px`;
-          tooltip.style.top = `${stageY - 15}px`;
-          tooltip.style.display = "block";
-        }
-
-        const dateStr = getDayFromDate(day);
-        let content = `<div class="tt-date">${dateStr} (Day ${day})</div>`;
-        content += `<div class="tt-row"><span>1981–2010 Avg:</span> <strong>${avgVal} M km²</strong></div>`;
-        content += `<div class="tt-row"><span>2012 (Record):</span> <strong style="color: var(--teal-2);">${y2012Val} M km²</strong></div>`;
-        if (y2015Val != null) {
-          content += `<div class="tt-row"><span>2015:</span> <strong>${y2015Val} M km²</strong></div>`;
-        }
-        content += `<div class="tt-row" style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 3px; font-size: 10px; opacity: 0.85;">`
-                 + `Equivalence: ~${(avgVal / 9.98).toFixed(1)}x Canada</div>`;
-        tooltip.innerHTML = content;
-      }
-
-      if (activeStat) {
-        activeStat.textContent = `DAY: ${day} // AVG: ${avgVal}M // 2012: ${y2012Val}M`;
-      }
-    });
-
-    mouseCatcher.addEventListener("mouseleave", () => {
-      if (scrubLine && scrubLine.style) scrubLine.style.display = "none";
-      if (scrubPoint && scrubPoint.style) scrubPoint.style.display = "none";
-      if (tooltip && tooltip.style) tooltip.style.display = "none";
-      if (activeStat) activeStat.textContent = "DAY: 56 // PEAK: 14.54M";
-    });
-  }
-
-  // Theme Toggle Button
-  const btnTheme = $("btn-arctic-theme");
-  if (btnTheme && chartCard) {
-    btnTheme.addEventListener("click", () => {
-      const isNewsprint = chartCard.dataset.mode === "newsprint";
-      const nextMode = isNewsprint ? "cyber" : "newsprint";
-      chartCard.dataset.mode = nextMode;
-      btnTheme.textContent = nextMode === "newsprint" ? "☀️ Editorial Paper" : "🌙 Obsidian Cyber";
-      if (nextMode === "newsprint") {
-        btnTheme.classList.add("active");
-      } else {
-        btnTheme.classList.remove("active");
-      }
-      showToast(`Arctic chart theme: ${nextMode === "newsprint" ? "Editorial Newsprint" : "Obsidian Cyber"}`);
-    });
-  }
-
-  // Highlight 2012 Record Low
-  const btn2012 = $("btn-arctic-focus-2012");
-  if (btn2012) {
-    let highlighted = false;
-    btn2012.addEventListener("click", () => {
-      highlighted = !highlighted;
-      if (highlighted) {
-        btn2012.classList.add("active");
-      } else {
-        btn2012.classList.remove("active");
-      }
-      const c2012 = $("curve-2012");
-      if (c2012) {
-        if (highlighted) c2012.classList.add("highlighted");
-        else c2012.classList.remove("highlighted");
-      }
-      document.querySelectorAll(".curve-historical").forEach((p) => {
-        if (highlighted) p.classList.add("dimmed");
-        else p.classList.remove("dimmed");
-      });
-      showToast(highlighted ? "Focused on 2012 historic sea ice record low (3.41 M km²)" : "Cleared focus on 2012");
-    });
-  }
-
-  // Fullscreen Expand Toggle
-  const btnFs = $("btn-arctic-fullscreen");
-  const btnFloatExp = $("btn-arctic-expand-float");
-  [btnFs, btnFloatExp].forEach((btn) => {
-    if (btn) {
-      btn.addEventListener("click", () => {
-        if (!document.fullscreenElement) {
-          if (chartCard && chartCard.requestFullscreen) {
-            chartCard.requestFullscreen().catch(() => {});
-          } else if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(() => {});
-          }
-        } else {
-          if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-        }
-      });
+// Window hashchange listener for browser forward/back navigation
+if (typeof window !== "undefined" && window.addEventListener) {
+  window.addEventListener("hashchange", () => {
+    if (window.location && window.location.hash) {
+      goToSlide(getSlideIndexFromHash(window.location.hash));
     }
   });
 }
 
-initArcticChart();
+
 renderAuditLog();
 poll();
 setInterval(poll, POLL_INTERVAL_MS);
@@ -1532,24 +1338,190 @@ document.addEventListener("DOMContentLoaded", () => {
   "use strict";
   const $ = (id) => document.getElementById(id);
   function text(v) { return v == null ? "—" : String(v); }
-  function node(tag, value, cls) { const el = document.createElement(tag); if (value !== undefined) el.textContent = text(value); if (cls) el.className = cls; return el; }
+  function node(tag, value, cls) {
+    const el = document.createElement(tag);
+    if (value !== undefined) el.textContent = text(value);
+    if (cls) el.className = cls;
+    return el;
+  }
+
+  function formatTarget(target) {
+    if (!target || typeof target !== "object") return "—";
+    const pid = target.target_pid || target.pid;
+    const host = target.host_id;
+    const path = target.path || target.file_path;
+    if (host && pid) return "host " + host + " · pid " + pid;
+    if (pid) return "pid " + pid;
+    if (host && path) return "host " + host + " · path " + path;
+    if (path) return "path " + path;
+    if (host) return "host " + host;
+    return "—";
+  }
+
+  function formatCommandExecution(action) {
+    if (!action.command_id || !action.command_state) {
+      return "No command issued";
+    }
+    if (action.command_state === "SUCCEEDED") {
+      const tgt = formatTarget(action.target);
+      const tgtPart = (tgt && tgt !== "—") ? ` (${tgt})` : "";
+      return `Agent reported SUCCEEDED for ${action.action}${tgtPart} · command ${action.command_id}`;
+    }
+    if (action.command_state === "DISPATCHED") {
+      return `${action.action} is DISPATCHED · no outcome reported yet`;
+    }
+    if (action.command_state === "FAILED") {
+      return `Agent reported FAILED for ${action.action} · command ${action.command_id}`;
+    }
+    return `Command ${action.command_id} (${action.command_state})`;
+  }
+
   function rowFor(action) {
     const row = node("tr");
-    row.append(node("td", action.lifecycle_state), node("td", action.action), node("td", action.tier), node("td", action.alert_id), node("td", action.created_at), node("td", action.decided_reason));
+
+    // 0: State
+    const stateStr = text(action.lifecycle_state || "PENDING");
+    const c0 = node("td", stateStr);
+    const badge0 = node("span", stateStr, "badge badge-" + stateStr.toLowerCase());
+    c0.append(badge0);
+
+    // 1: Action & Target
+    const c1 = node("td");
+    const actName = node("div", action.action, "action-name");
+    const tgtText = formatTarget(action.target);
+    const tgtSub = node("div", tgtText, "action-target");
+    c1.append(actName, tgtSub);
+
+    // 2: Tier
+    const tierStr = text(action.tier || "ANALYST_APPROVAL");
+    const c2 = node("td", tierStr);
+    const badgeTier = node("span", tierStr, "badge-tier");
+    c2.append(badgeTier);
+
+    // 3: Alert ID
+    const c3 = node("td", action.alert_id);
+
+    // 4: Created At
+    const c4 = node("td", action.created_at);
+
+    // 5: Decided Reason
+    const c5 = node("td", action.decided_reason);
+
+    // 6: Command Execution
+    const c6 = node("td", formatCommandExecution(action));
+
+    // 7: Audit Trail
+    const c7 = node("td");
+    if (Array.isArray(action.audit) && action.audit.length > 0) {
+      const details = node("details", undefined, "response-audit-details");
+      const summary = node("summary", `${action.audit.length} audit events`);
+      const list = node("ul", undefined, "audit-events-list");
+      for (const item of action.audit) {
+        const itemText = `${item.event || "event"} · by ${item.actor || "unknown"} · ${item.detail || ""}`;
+        list.append(node("li", itemText));
+      }
+      details.append(summary, list);
+      c7.append(details);
+    } else {
+      c7.append(node("span", "No audit events", "text-muted"));
+    }
+
+    // 8: Decision Controls
+    const c8 = node("td");
+    if (action.lifecycle_state === "PENDING") {
+      const btnAuth = node("button", "Authorize", "btn-sm btn-primary btn-authorize");
+      const btnRej = node("button", "Reject", "btn-sm btn-danger btn-reject");
+
+      btnAuth.addEventListener("click", async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        btnAuth.disabled = true;
+        btnRej.disabled = true;
+        btnAuth.textContent = "Authorizing...";
+        try {
+          const res = await fetch(`/api/response-actions/${encodeURIComponent(action.response_id)}/authorize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+          });
+          if (res.ok) {
+            lastPayloadString = null;
+            await pollResponseActions();
+          } else {
+            const err = await res.json().catch(() => ({}));
+            if (typeof alert === "function") alert("Failed to authorize: " + (err.error || res.statusText));
+            btnAuth.disabled = false;
+            btnRej.disabled = false;
+            btnAuth.textContent = "Authorize";
+          }
+        } catch (ex) {
+          if (typeof alert === "function") alert("Network error: " + ex.message);
+          btnAuth.disabled = false;
+          btnRej.disabled = false;
+          btnAuth.textContent = "Authorize";
+        }
+      });
+
+      btnRej.addEventListener("click", async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const reason = (typeof prompt === "function") ? prompt("Enter rejection reason (required):") : "Analyst dismissed";
+        if (!reason || !reason.trim()) {
+          return;
+        }
+        btnAuth.disabled = true;
+        btnRej.disabled = true;
+        btnRej.textContent = "Rejecting...";
+        try {
+          const res = await fetch(`/api/response-actions/${encodeURIComponent(action.response_id)}/reject`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: reason.trim() })
+          });
+          if (res.ok) {
+            lastPayloadString = null;
+            await pollResponseActions();
+          } else {
+            const err = await res.json().catch(() => ({}));
+            if (typeof alert === "function") alert("Failed to reject: " + (err.error || res.statusText));
+            btnAuth.disabled = false;
+            btnRej.disabled = false;
+            btnRej.textContent = "Reject";
+          }
+        } catch (ex) {
+          if (typeof alert === "function") alert("Network error: " + ex.message);
+          btnAuth.disabled = false;
+          btnRej.disabled = false;
+          btnRej.textContent = "Reject";
+        }
+      });
+
+      c8.append(btnAuth, btnRej);
+    }
+
+    row.append(c0, c1, c2, c3, c4, c5, c6, c7, c8);
     return row;
   }
+
+  let lastPayloadString = null;
+
   async function pollResponseActions() {
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 8000);
     try {
       const response = await fetch("/api/response-actions", { cache: "no-store", signal: controller.signal });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        lastPayloadString = null;
         $("response-table").hidden = true; $("response-empty").hidden = false;
         $("response-empty-title").textContent = response.status === 503 ? "Response actions unavailable" : "Cannot load response actions";
         $("response-empty-description").textContent = text(payload.error || payload.detail || "Manager did not return response actions.");
         $("response-status").textContent = "Not connected";
         return;
       }
+
+      const payloadStr = JSON.stringify(payload);
+      if (payloadStr === lastPayloadString) {
+        return;
+      }
+      lastPayloadString = payloadStr;
+
       const actions = Array.isArray(payload.response_actions) ? payload.response_actions : [];
       const fragment = document.createDocumentFragment();
       for (const action of actions) fragment.append(rowFor(action));
@@ -1560,6 +1532,7 @@ document.addEventListener("DOMContentLoaded", () => {
       $("response-empty-description").textContent = "Response actions appear here when a detection recommends one.";
       $("response-status").textContent = "Connected · updated " + new Date().toLocaleTimeString();
     } catch {
+      lastPayloadString = null;
       $("response-status").textContent = "Cannot reach the console server";
     } finally { clearTimeout(timeout); }
   }
@@ -1567,3 +1540,4 @@ document.addEventListener("DOMContentLoaded", () => {
   pollResponseActions();
   setInterval(pollResponseActions, 3000);
 });
+
