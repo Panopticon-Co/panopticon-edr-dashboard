@@ -15,6 +15,46 @@
 
 ---
 
+## 📌 Repository Purpose & Team Architecture Breakdown
+
+### 💡 Why do we have separate repositories?
+When multiple engineers build a large cybersecurity system, pushing changes into a single repository causes merge conflicts and overwrites active teammate code. 
+
+To keep the Panopticon codebase modular, clean, and easily verifiable, the project is structured across dedicated repositories:
+
+### 1. `Panopticon-Co/panopticon-edr-dashboard` (This Repository)
+* **Type:** **Full-Stack Capstone Monorepo**
+* **Author / Architect:** Aditya Singh (Lead Detection & Dashboard Architect, Roll: K064)
+* **What it is in plain English:**
+  > **"The Complete All-in-One System"** — This is the full end-to-end capstone system that connects the SentinelOne web console with a high-throughput Spring Boot Java backend (`:8788`), SQLite persistence (`panopticon.db`), and the complete 49-case E2E test suite.
+* **Core Capabilities:**
+  * Runs both the frontend and backend in one click (`start_dashboard.bat`).
+  * Telemetry ingestion, endpoint registry, and live alert persistence.
+  * Closed 7-action response authorization and audit trail.
+  * Verified with 100% test pass rate across E2E, Python unit, and Java test suites.
+
+### 2. [Panopticon-Co/panopticon-sentinel-ui-aditya](https://github.com/Panopticon-Co/panopticon-sentinel-ui-aditya)
+* **Type:** **Frontend-Only Repository**
+* **Author / Architect:** Aditya Singh (Lead Detection & Dashboard Architect, Roll: K064)
+* **What it is in plain English:**
+  > **"The Analyst's Screen"** — Purely the **visual web dashboard (UI)** that a security analyst looks at in their browser. Contains the 4-slide navigation (`#overview`, `#endpoints`, `#alerts`, `#response`), closed 7-action response queue, and reverse proxy layer. Operates zero-config offline or live with backend proxying.
+
+### 3. [Panopticon-Co/panopticon-console](https://github.com/Panopticon-Co/panopticon-console)
+* **Type:** **Teammate Workspace**
+* **Author / Lead:** Rishi Bose
+* **What it is in plain English:**
+  > **"Forensic Evidence & Artifacts"** — Rishi's dedicated workspace focusing on cryptographic verification of artifacts and signed forensic downloads. Maintained independently to prevent code collisions.
+
+### 📋 Summary Matrix for Evaluators
+
+| Repository | Focus | Tech Stack | Main Purpose |
+| :--- | :--- | :--- | :--- |
+| **`panopticon-edr-dashboard`** *(This Repo)* | **Full-Stack** | JS, CSS, Python, Java 21, Spring Boot, SQLite | Complete end-to-end capstone system. |
+| **`panopticon-sentinel-ui-aditya`** | **Frontend Only** | HTML5, CSS Tokens, Vanilla JS, Python Proxy | Lightweight, plug-and-play analyst web UI. |
+| **`panopticon-console`** | **Forensics / Artifacts** | Python, Evidence Verifier | Rishi's signed evidence & download engine. |
+
+---
+
 ## 🏛️ System Architecture
 
 This monorepo unifies the SentinelOne-inspired security operations web console with a high-performance Spring Boot Java telemetry backend into a production-grade, end-to-end verified capstone demonstration:
