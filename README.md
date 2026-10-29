@@ -1,60 +1,74 @@
-# Panopticon EDR — Enterprise SentinelOne-Inspired Dashboard & Telemetry Backend
+# Panopticon EDR — Enterprise SentinelOne Dashboard & Telemetry Backend
 
-Enterprise Endpoint Detection and Response (EDR) web console and Java telemetry backend service for the **Panopticon** cybersecurity capstone project.
+[![Organization](https://img.shields.io/badge/Org-Panopticon--Co-blue.svg)](https://github.com/Panopticon-Co)
+[![Author](https://img.shields.io/badge/Author-Aditya%20Singh%20(K064)-darkgreen.svg)](https://github.com/Adityasingh230058)
+[![Role](https://img.shields.io/badge/Role-Lead%20Detection%20%26%20Dashboard%20Architect-purple.svg)]()
+[![Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
+[![Frontend Repo](https://img.shields.io/badge/Frontend--Only%20Extraction-panopticon--sentinel--ui--aditya-orange.svg)](https://github.com/Panopticon-Co/panopticon-sentinel-ui-aditya)
+[![E2E Tests](https://img.shields.io/badge/E2E%20Tests-49%2F49%20Passing-success.svg)]()
+[![Unit Tests](https://img.shields.io/badge/Python%20Unit%20Tests-64%2F64%20Passing-success.svg)]()
+[![Backend Tests](https://img.shields.io/badge/Java%20Backend-Gradle%20Passing-success.svg)]()
 
-Developed by **Aditya Singh** (Lead Detection & Dashboard Architect).
+> **Comprehensive Full-Stack Capstone Demonstration**  
+> Architected, developed, and maintained by **Aditya Singh** (Lead Detection & Dashboard Architect, Roll: K064).  
+> Dedicated Frontend-Only Repository: [Panopticon-Co/panopticon-sentinel-ui-aditya](https://github.com/Panopticon-Co/panopticon-sentinel-ui-aditya).
 
 ---
 
 ## 🏛️ System Architecture
 
-This repository unifies both the analyst dashboard frontend and the high-throughput telemetry ingestion backend into an isolated, independent workspace:
+This monorepo unifies the SentinelOne-inspired security operations web console with a high-performance Spring Boot Java telemetry backend into a production-grade, end-to-end verified capstone demonstration:
 
 ```
 panopticon-edr-dashboard/
-├── console/                       # Web UI & Proxy Server (Port 8787)
-│   ├── app.py                     # Python HTTP Server & Security Reverse Proxy
-│   ├── alerts.ndjson              # Local development alert feed
-│   └── static/
-│       ├── index.html             # SentinelOne Singularity-inspired Dashboard UI
-│       ├── app.js                 # Interactive client state, SVG graphs & charts
-│       └── css/
-│           ├── layout.css         # Grid layouts, cards, modals & animations
-│           └── tokens.css         # SOC dark-mode color system & design tokens
+├── console/                       # Web UI & Security Reverse Proxy Server (Port 8787)
+│   ├── app.py                     # Python HTTP Server & Upstream Proxy
+│   ├── alerts.ndjson              # Offline fallback telemetry feed
+│   ├── static/                    # Zero-build SentinelOne single-page web console
+│   │   ├── index.html             # 4-Slide Application Layout (Overview, Endpoints, Alerts, Response)
+│   │   ├── app.js                 # State management, slide routing, SVG metrics
+│   │   └── css/                   # Design token system & accessible cyber themes
+│   └── tests/                     # 64-case Python unit and proxy security test suite
 ├── backend/                       # Spring Boot Java REST Backend (Port 8788)
-│   ├── src/main/java/             # Spring Boot REST Controllers, Repositories, Models & Services
-│   ├── src/main/resources/        # application.properties & database migrations
-│   ├── panopticon.db              # SQLite relational alert & endpoint store (WAL mode)
-│   ├── build.gradle               # Gradle build definitions
-│   └── gradlew.bat                # Gradle wrapper
+│   ├── src/main/java/             # Controllers, Repositories, Telemetry Models & Services
+│   ├── src/main/resources/        # application.properties & database configuration
+│   ├── panopticon.db              # SQLite relational store with Write-Ahead Logging (WAL)
+│   ├── build.gradle               # Gradle build definitions & test configuration
+│   └── gradlew.bat                # Gradle build wrapper
+├── tests/                         # Full-Stack Automated Verification Infrastructure
+│   └── e2e/                       # 49-case multi-tier End-to-End Test Suite
 ├── start_dashboard.bat            # One-click startup for both services
 └── README.md
 ```
 
 ---
 
-## ✨ Features & Capabilities
+## ✨ Key Technical Achievements
 
-- **SentinelOne Singularity UI Layout:**
-  - Grouped enterprise left sidebar (Dashboards, Triage Feed, Response Queue, Assets, Threat Hunting).
-  - Top KPI Metrics Strip (Critical, High, Medium, Low severity alerts and fleet coverage).
-  - Open Alerts Breakdown with severity badges, timestamps, and MITRE ATT&CK tags.
-- **Spring Boot Java Backend (Port 8788):**
-  - High-performance REST endpoints for alert ingestion, statistics, and analyst response authorization.
-  - Native SQLite persistence with thread-safe Write-Ahead Logging (WAL).
-  - Role-based analyst authentication.
+1. **SentinelOne Singularity 4-Slide Navigation Interface (R3)**:
+   - High-performance, client-side slide navigation (`#overview`, `#endpoints`, `#alerts`, `#response`).
+   - Deep-linking and history state synchronization without full page reloads.
+
+2. **Decommission of Obsolete Multi-Cycle Lake (R1)**:
+   - Completely eliminated the unverified "Fleet Telemetry Fluctuations // Multi-Cycle Lake" section.
+   - Cleaned up obsolete SVG wave animations and unanchored metrics to guarantee architectural purity.
+
+3. **Closed 7-Action Response Engine Integration (R2)**:
+   - Enforces Panopticon's closed 7-action response vocabulary:
+     - *Auto-Safe*: `COLLECT_PROCESS_INFO`, `COLLECT_NETWORK_CONNECTIONS`.
+     - *Analyst-Approval*: `KILL_PROCESS`, `COLLECT_FILE`, `QUARANTINE_FILE`, `ISOLATE_HOST`, `RELEASE_HOST_ISOLATION`.
+   - Modals protect destructive actions, requiring mandatory justification from analysts.
+
+4. **Security Reverse Proxy & Token Encapsulation**:
+   - `console/app.py` proxies requests to the Java backend (`:8788`) while securely managing `PANOPTICON_MANAGER_TOKEN`.
+   - Zero credential leakage to the browser DOM.
 
 ---
 
 ## 🚀 Quick Start Guide
 
-### 1. Prerequisites
-- **Python 3.9+**
-- **Java 17+ or 21+** (e.g. OpenJDK or Android Studio JBR)
+### Start Both Services (Windows)
 
-### 2. Start Both Services (Windows)
-
-Double click or execute:
 ```powershell
 .\start_dashboard.bat
 ```
@@ -65,8 +79,6 @@ Or start them manually in two terminals:
 ```powershell
 cd backend
 .\gradlew.bat bootRun
-# OR with prebuilt jar:
-# java -jar build\libs\panopticon-backend-service-1.0.0-SNAPSHOT.jar
 ```
 
 #### Terminal 2: Web Console Dashboard (Port 8787)
@@ -76,18 +88,40 @@ $env:PANOPTICON_MANAGER_TOKEN = "mock-analyst-token"
 python app.py --manager-url http://127.0.0.1:8788 --alerts-file alerts.ndjson
 ```
 
-### 3. Open in Browser
-Visit **[http://127.0.0.1:8787/#overview](http://127.0.0.1:8787/#overview)**.
+Open your browser to: **[http://127.0.0.1:8787/#overview](http://127.0.0.1:8787/#overview)**.
 
 ---
 
-## 📡 REST API Endpoints (Backend Service :8788)
+## 🧪 Verification & Test Suites (100% Pass Rate)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/health` | Healthcheck and service runtime status |
-| `GET` | `/api/v1/dashboard/stats` | Aggregated fleet alert severity and host metrics |
-| `GET` | `/api/v1/alerts` | Paginated alert feed with MITRE tactic/technique details |
-| `GET` | `/api/v1/endpoints` | Fleet assets and host agent telemetry status |
-| `GET` | `/api/v1/response-actions` | Active response queue awaiting analyst authorization |
-| `POST` | `/api/v1/response-actions/{id}/authorize` | Approve remediation (isolate host, kill PID) |
+### 1. Node.js E2E Test Suite (49/49 PASS)
+```powershell
+node tests/e2e/runner.js
+```
+
+### 2. Python Unit & Security Suite (64/64 PASS)
+```powershell
+cd console
+python -m unittest discover -s tests -v
+```
+
+### 3. Java Spring Boot Backend Suite
+```powershell
+cd backend
+.\gradlew.bat test
+```
+
+---
+
+## 👥 Contributor Attribution & Repository Separation
+
+| Contributor | Role & Domain | Primary Repositories |
+| :--- | :--- | :--- |
+| **Aditya Singh** (`Adityasingh230058`) | **Lead Detection & Dashboard Architect (Roll: K064)**<br>Full-Stack EDR Architecture, Sentinel UI, Closed Response Queue, Telemetry Backend | [Panopticon-Co/panopticon-edr-dashboard](https://github.com/Panopticon-Co/panopticon-edr-dashboard) *(Full-Stack)*<br>[Panopticon-Co/panopticon-sentinel-ui-aditya](https://github.com/Panopticon-Co/panopticon-sentinel-ui-aditya) *(Frontend-Only)* |
+| **Rishi Bose** (`rishibose35`) | **Evidence & Verification Lead**<br>Artifact Verification, Signed Telemetry Downloads | [Panopticon-Co/panopticon-console](https://github.com/Panopticon-Co/panopticon-console) |
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License.
